@@ -209,16 +209,31 @@ export default function Analytics() {
     let cancelled = false;
     async function go() {
       try {
+        const formBody = new URLSearchParams();
+        formBody.append("username", "test");
+        formBody.append("password", "123456");
+
         const res = await fetch(
           "https://backend.jotish.in/backend_dev/gettabledata.php",
           {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username: "test", password: "123456" }),
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: formBody.toString(),
           }
         );
-        const json = await res.json();
-        const rows = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : [];
+        const text = await res.text();
+        let json;
+        try { json = JSON.parse(text); } catch { json = []; }
+
+        let rows = [];
+        if (Array.isArray(json)) rows = json;
+        else if (Array.isArray(json?.data)) rows = json.data;
+        else if (Array.isArray(json?.employees)) rows = json.employees;
+        else if (Array.isArray(json?.records)) rows = json.records;
+        else if (typeof json === "object" && json !== null) {
+          const vals = Object.values(json);
+          if (vals.length && typeof vals[0] === "object") rows = vals;
+        }
         if (!cancelled) setEmployees(rows);
       } catch {
         // silent – chart just won't render

@@ -39,22 +39,45 @@ export default function List() {
     async function fetchEmployees() {
       try {
         setLoading(true);
+
+        // Try form-encoded first (most PHP backends prefer this)
+        const formBody = new URLSearchParams();
+        formBody.append("username", "test");
+        formBody.append("password", "123456");
+
         const res = await fetch(
           "https://backend.jotish.in/backend_dev/gettabledata.php",
           {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username: "test", password: "123456" }),
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: formBody.toString(),
           }
         );
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
-        // API might wrap data or return array directly
-        const rows = Array.isArray(json)
-          ? json
-          : Array.isArray(json?.data)
-          ? json.data
-          : [];
+
+        const text = await res.text();
+        let json;
+        try {
+          json = JSON.parse(text);
+        } catch {
+          throw new Error("API returned invalid JSON: " + text.slice(0, 120));
+        }
+
+        // Handle all common response shapes
+        let rows = [];
+        if (Array.isArray(json)) {
+          rows = json;
+        } else if (Array.isArray(json?.data)) {
+          rows = json.data;
+        } else if (Array.isArray(json?.employees)) {
+          rows = json.employees;
+        } else if (Array.isArray(json?.records)) {
+          rows = json.records;
+        } else if (typeof json === "object" && json !== null) {
+          // Some APIs return { "0": {...}, "1": {...} }
+          const vals = Object.values(json);
+          if (vals.length && typeof vals[0] === "object") rows = vals;
+        }
+
         if (!cancelled) {
           setEmployees(rows);
           setFiltered(rows);
