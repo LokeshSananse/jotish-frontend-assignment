@@ -4,6 +4,16 @@ A 4-screen React application built for the Jotish Frontend Internship Assignment
 
 ---
 
+## 🎥 Screen Recording
+
+> End-to-end walkthrough including Image Merging logic + Scroll Offset explanation
+
+📹 **Drive Link:** [Click here to watch](https://drive.google.com/your-link-here)
+
+> *(Replace the link above after uploading your recording to Google Drive)*
+
+---
+
 ## Tech Stack
 
 | Layer       | Choice                       |
