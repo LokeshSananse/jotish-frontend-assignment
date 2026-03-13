@@ -15,9 +15,9 @@ const COLUMNS = [
 ];
 
 function formatSalary(val) {
-  const n = parseFloat(val);
-  if (isNaN(n)) return val ?? "—";
-  return "₹" + n.toLocaleString("en-IN");
+  if (!val) return "—";
+  // API returns values like "$320,800" — return as-is, they're already formatted
+  return String(val);
 }
 
 export default function List() {
@@ -40,43 +40,29 @@ export default function List() {
       try {
         setLoading(true);
 
-        // Try form-encoded first (most PHP backends prefer this)
-        const formBody = new URLSearchParams();
-        formBody.append("username", "test");
-        formBody.append("password", "123456");
-
         const res = await fetch(
           "https://backend.jotish.in/backend_dev/gettabledata.php",
           {
             method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: formBody.toString(),
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: "test", password: "123456" }),
           }
         );
 
-        const text = await res.text();
-        let json;
-        try {
-          json = JSON.parse(text);
-        } catch {
-          throw new Error("API returned invalid JSON: " + text.slice(0, 120));
-        }
+        const json = await res.json();
 
-        // Handle all common response shapes
-        let rows = [];
-        if (Array.isArray(json)) {
-          rows = json;
-        } else if (Array.isArray(json?.data)) {
-          rows = json.data;
-        } else if (Array.isArray(json?.employees)) {
-          rows = json.employees;
-        } else if (Array.isArray(json?.records)) {
-          rows = json.records;
-        } else if (typeof json === "object" && json !== null) {
-          // Some APIs return { "0": {...}, "1": {...} }
-          const vals = Object.values(json);
-          if (vals.length && typeof vals[0] === "object") rows = vals;
-        }
+        // API returns { TABLE_DATA: { data: [[name, position, city, id, date, salary], ...] } }
+        const raw = json?.TABLE_DATA?.data ?? [];
+
+        const rows = raw.map((row, idx) => ({
+          id:         row[3] ?? idx + 1,
+          name:       row[0] ?? "—",
+          department: row[1] ?? "—",
+          city:       row[2] ?? "—",
+          startDate:  row[4] ?? "—",
+          salary:     row[5] ?? "—",
+          email:      `${String(row[0] ?? "user").toLowerCase().replace(/\s+/g, ".")}@company.com`,
+        }));
 
         if (!cancelled) {
           setEmployees(rows);

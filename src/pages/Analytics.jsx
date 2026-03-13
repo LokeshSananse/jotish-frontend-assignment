@@ -209,31 +209,26 @@ export default function Analytics() {
     let cancelled = false;
     async function go() {
       try {
-        const formBody = new URLSearchParams();
-        formBody.append("username", "test");
-        formBody.append("password", "123456");
-
         const res = await fetch(
           "https://backend.jotish.in/backend_dev/gettabledata.php",
           {
             method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: formBody.toString(),
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: "test", password: "123456" }),
           }
         );
-        const text = await res.text();
-        let json;
-        try { json = JSON.parse(text); } catch { json = []; }
+        const json = await res.json();
 
-        let rows = [];
-        if (Array.isArray(json)) rows = json;
-        else if (Array.isArray(json?.data)) rows = json.data;
-        else if (Array.isArray(json?.employees)) rows = json.employees;
-        else if (Array.isArray(json?.records)) rows = json.records;
-        else if (typeof json === "object" && json !== null) {
-          const vals = Object.values(json);
-          if (vals.length && typeof vals[0] === "object") rows = vals;
-        }
+        // API: { TABLE_DATA: { data: [[name, position, city, id, date, salary], ...] } }
+        const raw = json?.TABLE_DATA?.data ?? [];
+        const rows = raw.map((row, idx) => ({
+          id:         row[3] ?? idx + 1,
+          name:       row[0] ?? "—",
+          department: row[1] ?? "—",
+          city:       row[2] ?? "—",
+          startDate:  row[4] ?? "—",
+          salary:     String(row[5] ?? "0").replace(/[$,]/g, ""),
+        }));
         if (!cancelled) setEmployees(rows);
       } catch {
         // silent – chart just won't render
